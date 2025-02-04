@@ -86,11 +86,15 @@ const DashboardPage = () => {
       setTotalBookings(bookingsCount || 0);
 
       // Fetch booking status data
-      const { data: bookingsStatus } = await supabase
+      const { data: bookingsStatus, error: bookingStatusError } = await supabase
         .from('bookings')
-        .select('booking_status, count(*)')
+        .select('booking_status, count')
         .eq('bus_routes.company_id', companyId)
-        .group('booking_status');
+        .select(`
+          booking_status,
+          count(*) as count
+        `)
+        .group_by('booking_status');
 
       setBookingStatusData(
         bookingsStatus?.map((status) => ({
@@ -99,12 +103,15 @@ const DashboardPage = () => {
         })) || []
       );
 
-      // Fetch route passenger data
-      const { data: routePassengers } = await supabase
-        .from('passenger_checkins')
-        .select('route, count(*)')
-        .eq('company_id', companyId)
-        .group('route');
+        // Fetch route passenger data
+        const { data: routePassengers, error: routePassengersError } = await supabase
+          .from('passenger_checkins')
+          .select(`
+            route,
+            count(*) as count
+          `)
+          .eq('company_id', companyId)
+          .group_by('route');
 
       setRoutePassengerData(
         routePassengers?.map((route) => ({
@@ -122,6 +129,7 @@ const DashboardPage = () => {
       setLoading(false);
     }
   };
+
 
   // Colors for pie chart
   const COLORS = ['#FFA500', '#FFD700', '#FF6347'];

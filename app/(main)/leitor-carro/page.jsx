@@ -182,6 +182,7 @@ const LeitorPage = () => {
   const resetScanner = async () => {
     await stopScanning();
     setScanResult(null);
+    setIsScanning(false)
     setError(null);
     isProcessing.current = false;
     if (debounceTimer.current) {
