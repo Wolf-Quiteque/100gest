@@ -28,6 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { Download, FileSpreadsheet, FilesIcon } from 'lucide-react';
 
 const FinancasPage = () => {
@@ -147,19 +150,111 @@ const FinancasPage = () => {
 
 
   const exportToExcel = () => {
-    // Implementation would use a library like xlsx
-    toast({
-      title: 'Exportando para Excel',
-      description: 'Seu arquivo será baixado em instantes.',
-    });
+    try {
+      // Transform bookings data for Excel
+      const excelData = bookings.map(booking => ({
+        'Data': new Date(booking.booking_date).toLocaleDateString('pt-BR'),
+        'Rota': `${booking.bus_routes?.origin} → ${booking.bus_routes?.destination}`,
+        'Passageiros': booking.total_passengers,
+        'Preço Total': new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'AOA',
+        }).format(booking.total_price),
+        'Status': booking.booking_status === 'confirmed' 
+          ? 'Confirmado' 
+          : booking.booking_status === 'pending'
+          ? 'Pendente'
+          : 'Cancelado'
+      }));
+  
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+  
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Reservas');
+  
+      // Save file
+      XLSX.writeFile(wb, `reservas-${companyName}-${new Date().toISOString().split('T')[0]}.xlsx`);
+  
+      toast({
+        title: 'Exportação concluída',
+        description: 'Arquivo Excel baixado com sucesso.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar para Excel.',
+      });
+    }
   };
-
+  
   const exportToPDF = () => {
-    // Implementation would use a library like jspdf
-    toast({
-      title: 'Exportando para PDF',
-      description: 'Seu arquivo será baixado em instantes.',
-    });
+    try {
+      const doc = new jsPDF();
+  
+      // Add company name as title
+      doc.setFontSize(16);
+      doc.text(`Relatório de Reservas - ${companyName}`, 14, 15);
+  
+      // Add summary section
+      doc.setFontSize(12);
+      doc.text('Resumo Financeiro:', 14, 25);
+      doc.setFontSize(10);
+      doc.text(`Receita Total: ${new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'AOA',
+      }).format(totalRevenue)}`, 14, 32);
+      doc.text(`Receita Pendente: ${new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'AOA',
+      }).format(pendingRevenue)}`, 14, 38);
+      doc.text(`Receita Cancelada: ${new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'AOA',
+      }).format(cancelledRevenue)}`, 14, 44);
+  
+      // Prepare table data
+      const tableRows = bookings.map(booking => [
+        new Date(booking.booking_date).toLocaleDateString('pt-BR'),
+        `${booking.bus_routes?.origin} → ${booking.bus_routes?.destination}`,
+        booking.total_passengers.toString(),
+        new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'AOA',
+        }).format(booking.total_price),
+        booking.booking_status === 'confirmed' 
+          ? 'Confirmado' 
+          : booking.booking_status === 'pending'
+          ? 'Pendente'
+          : 'Cancelado'
+      ]);
+  
+      // Add table
+      doc.autoTable({
+        startY: 50,
+        head: [['Data', 'Rota', 'Passageiros', 'Preço Total', 'Status']],
+        body: tableRows,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 1 },
+        headStyles: { fillColor: [255, 165, 0], textColor: [0, 0, 0] }
+      });
+  
+      // Save file
+      doc.save(`reservas-${companyName}-${new Date().toISOString().split('T')[0]}.pdf`);
+  
+      toast({
+        title: 'Exportação concluída',
+        description: 'Arquivo PDF baixado com sucesso.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar para PDF.',
+      });
+    }
   };
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
