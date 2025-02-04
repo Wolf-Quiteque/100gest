@@ -18,7 +18,6 @@ import {
 const PassengerCheckInPage = () => {
   const supabase = createClientComponentClient();
   const { toast } = useToast();
-
   const [scanResult, setScanResult] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
@@ -33,7 +32,6 @@ const PassengerCheckInPage = () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) throw new Error('Usuário não autenticado.');
-
         setUserMetadata({
           userId: user.id,
           companyId: user.user_metadata?.company_id,
@@ -43,12 +41,9 @@ const PassengerCheckInPage = () => {
         setError('Erro ao carregar dados do usuário: ' + err.message);
       }
     };
-
     fetchUserMetadata();
-
     const html5QrCode = new Html5Qrcode("qr-reader");
     setHtml5QrCode(html5QrCode);
-
     return () => {
       if (html5QrCode && isScanning) {
         html5QrCode.stop().catch(() => {
@@ -89,17 +84,14 @@ const PassengerCheckInPage = () => {
       if (!html5QrCode) {
         throw new Error('Scanner não inicializado.');
       }
-
       if (isScanning) {
         await stopScanning();
       }
-
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
       };
-
       await html5QrCode.start(
         { facingMode: facing },
         config,
@@ -108,7 +100,6 @@ const PassengerCheckInPage = () => {
           console.warn(err);
         }
       );
-
       setIsScanning(true);
       setError(null);
     } catch (err) {
@@ -121,7 +112,6 @@ const PassengerCheckInPage = () => {
   const handleScan = async (decodedText) => {
     try {
       setScanResult(decodedText);
-
       // Analisa o conteúdo do QR code
       const passengerData = JSON.parse(decodedText);
 
@@ -140,11 +130,17 @@ const PassengerCheckInPage = () => {
         .select('id')
         .match({ 
           booking_id: passengerData.bookingId,
+          ticket_id: passengerData.ticketId,
           bus_id: userBus.id 
         })
         .single();
 
       if (existingCheckin) {
+        toast({
+          title: "Passageiro já embarcou",
+          description: `O passageiro ${passengerData.passengerName} já realizou check-in.`,
+          variant: "destructive"
+        });
         throw new Error('Passageiro já realizou check-in.');
       }
 
@@ -205,7 +201,6 @@ const PassengerCheckInPage = () => {
                 </Button>
               )}
             </div>
-
             <div className="text-center space-y-4">
               {!isScanning && !scanResult && (
                 <Button 
@@ -216,7 +211,7 @@ const PassengerCheckInPage = () => {
                   Iniciar Scanner
                 </Button>
               )}
-              
+
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -226,7 +221,6 @@ const PassengerCheckInPage = () => {
           </div>
         </CardContent>
       </Card>
-
       {/* Modal de Sucesso */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation'; // Import useRouter for redirection
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,7 @@ import {
 
 const LeitorPage = () => {
   const supabase = createClientComponentClient();
-  const { toast } = useToast();
-
+  const router = useRouter(); // Initialize router for redirection
   const [scanResult, setScanResult] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
@@ -33,7 +32,6 @@ const LeitorPage = () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) throw new Error('Usuário não autenticado.');
-
         setUserMetadata({
           userId: user.id,
           companyId: user.user_metadata?.company_id,
@@ -43,7 +41,6 @@ const LeitorPage = () => {
         setError('Erro ao carregar dados do usuário: ' + err.message);
       }
     };
-
     fetchUserMetadata();
 
     // Initialize QR code instance
@@ -91,18 +88,15 @@ const LeitorPage = () => {
       if (!html5QrCode) {
         throw new Error('Scanner não inicializado.');
       }
-
       // Make sure scanner is stopped before starting
       if (isScanning) {
         await stopScanning();
       }
-
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
       };
-
       await html5QrCode.start(
         { facingMode: facing },
         config,
@@ -112,7 +106,6 @@ const LeitorPage = () => {
           console.warn(err);
         }
       );
-
       setIsScanning(true);
       setError(null);
     } catch (err) {
@@ -125,21 +118,17 @@ const LeitorPage = () => {
   const handleScan = async (decodedText) => {
     try {
       setScanResult(decodedText);
-
       // Validate the scanned bus ID
       const { data: bus, error: busError } = await supabase
         .from('buses')
         .select('*')
         .eq('reference', decodedText)
         .single();
-
       if (busError || !bus) throw new Error('Ônibus não encontrado.');
-
       // Check if the bus belongs to the same company
       if (bus.company_id !== userMetadata.companyId) {
         throw new Error('Ônibus não pertence à sua empresa.');
       }
-
       // Save the scan log
       const { error: logError } = await supabase
         .from('scan_logs')
@@ -150,15 +139,17 @@ const LeitorPage = () => {
             bus_id: bus.id,
           },
         ]);
-
       if (logError) throw logError;
-
       // Stop scanning
       await stopScanning();
-
       // Show success modal
       setScannedBus(bus);
       setIsModalOpen(true);
+
+      // Redirect to dashboard after 3 seconds
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
       await stopScanning();
@@ -192,7 +183,6 @@ const LeitorPage = () => {
                 </Button>
               )}
             </div>
-
             <div className="text-center space-y-4">
               {!isScanning && !scanResult && (
                 <Button 
@@ -203,7 +193,7 @@ const LeitorPage = () => {
                   Iniciar Scanner
                 </Button>
               )}
-              
+
               {scanResult && (
                 <>
                   <Alert className="bg-orange-100 border-orange-300">
@@ -224,7 +214,6 @@ const LeitorPage = () => {
                 </>
               )}
             </div>
-
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -233,7 +222,6 @@ const LeitorPage = () => {
           </div>
         </CardContent>
       </Card>
-
       {/* Success Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
@@ -244,6 +232,8 @@ const LeitorPage = () => {
             <DialogDescription>
               Olá, {userMetadata?.userName}! O registro do ônibus{' '}
               <span className="font-semibold">{scannedBus?.reference}</span> foi salvo.
+              <br />
+              Redirecionando para o painel em 3 segundos...
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
