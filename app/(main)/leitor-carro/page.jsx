@@ -171,7 +171,11 @@ const LeitorPage = () => {
       setScannedBus(bus);
       setIsModalOpen(true);
 
-      await resetScanner()
+      // Set redirect timer
+      const go = await resetScanner()
+       setTimeout(() => {
+        router.refresh()
+      }, 1300);
 
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
@@ -182,7 +186,6 @@ const LeitorPage = () => {
   const resetScanner = async () => {
     await stopScanning();
     setScanResult(null);
-    setIsScanning(false)
     setError(null);
     isProcessing.current = false;
     if (debounceTimer.current) {
