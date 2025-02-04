@@ -171,10 +171,7 @@ const LeitorPage = () => {
       setScannedBus(bus);
       setIsModalOpen(true);
 
-      // Set redirect timer
-      redirectTimer.current = setTimeout(() => {
-        router.refresh();
-      }, 1300);
+      await resetScanner()
 
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
