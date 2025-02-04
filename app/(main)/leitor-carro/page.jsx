@@ -1,12 +1,12 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, SwitchCamera } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation'; // Import useRouter for redirection
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
 
 const LeitorPage = () => {
   const supabase = createClientComponentClient();
-  const router = useRouter(); // Initialize router for redirection
+  const router = useRouter();
   const [scanResult, setScanResult] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
@@ -26,6 +26,11 @@ const LeitorPage = () => {
   const [scannedBus, setScannedBus] = useState(null);
   const [html5QrCode, setHtml5QrCode] = useState(null);
   const [cameraFacing, setCameraFacing] = useState('environment');
+
+  // Add refs for processing state and debounce timer
+  const isProcessing = useRef(false);
+  const debounceTimer = useRef(null);
+  const redirectTimer = useRef(null);
 
   useEffect(() => {
     const fetchUserMetadata = async () => {
@@ -43,16 +48,21 @@ const LeitorPage = () => {
     };
     fetchUserMetadata();
 
-    // Initialize QR code instance
     const html5QrCode = new Html5Qrcode("qr-reader");
     setHtml5QrCode(html5QrCode);
 
-    // Cleanup on unmount
     return () => {
       if (html5QrCode && isScanning) {
         html5QrCode.stop().catch(() => {
           // Ignore stop errors during cleanup
         });
+      }
+      // Clear any pending timers
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      if (redirectTimer.current) {
+        clearTimeout(redirectTimer.current);
       }
     };
   }, [isScanning]);
@@ -88,7 +98,6 @@ const LeitorPage = () => {
       if (!html5QrCode) {
         throw new Error('Scanner não inicializado.');
       }
-      // Make sure scanner is stopped before starting
       if (isScanning) {
         await stopScanning();
       }
@@ -102,7 +111,6 @@ const LeitorPage = () => {
         config,
         handleScan,
         (err) => {
-          // Only log errors, don't show to user unless critical
           console.warn(err);
         }
       );
@@ -116,20 +124,37 @@ const LeitorPage = () => {
   };
 
   const handleScan = async (decodedText) => {
+    // If already processing a scan or debounce timer is active, ignore this scan
+    if (isProcessing.current) {
+      return;
+    }
+
+    // Clear any existing timers
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    if (redirectTimer.current) {
+      clearTimeout(redirectTimer.current);
+    }
+
+    // Set processing flag
+    isProcessing.current = true;
+
     try {
       setScanResult(decodedText);
-      // Validate the scanned bus ID
+      
       const { data: bus, error: busError } = await supabase
         .from('buses')
         .select('*')
         .eq('reference', decodedText)
         .single();
+
       if (busError || !bus) throw new Error('Ônibus não encontrado.');
-      // Check if the bus belongs to the same company
+      
       if (bus.company_id !== userMetadata.companyId) {
         throw new Error('Ônibus não pertence à sua empresa.');
       }
-      // Save the scan log
+
       const { error: logError } = await supabase
         .from('scan_logs')
         .insert([
@@ -139,20 +164,26 @@ const LeitorPage = () => {
             bus_id: bus.id,
           },
         ]);
+
       if (logError) throw logError;
-      // Stop scanning
+
       await stopScanning();
-      // Show success modal
       setScannedBus(bus);
       setIsModalOpen(true);
 
-      // Redirect to dashboard after 3 seconds
-      setTimeout(() => {
+      // Set redirect timer
+      redirectTimer.current = setTimeout(() => {
         router.push('/dashboard');
       }, 3000);
+
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
       await stopScanning();
+    } finally {
+      // Set a debounce timer before allowing next scan
+      debounceTimer.current = setTimeout(() => {
+        isProcessing.current = false;
+      }, 2000); // 2 second debounce
     }
   };
 
@@ -160,6 +191,13 @@ const LeitorPage = () => {
     await stopScanning();
     setScanResult(null);
     setError(null);
+    isProcessing.current = false;
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    if (redirectTimer.current) {
+      clearTimeout(redirectTimer.current);
+    }
   };
 
   return (
@@ -222,7 +260,6 @@ const LeitorPage = () => {
           </div>
         </CardContent>
       </Card>
-      {/* Success Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, SwitchCamera } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,10 @@ const PassengerCheckInPage = () => {
   const [scannedPassenger, setScannedPassenger] = useState(null);
   const [html5QrCode, setHtml5QrCode] = useState(null);
   const [cameraFacing, setCameraFacing] = useState('environment');
+  
+  // Add refs for processing state and debounce timer
+  const isProcessing = useRef(false);
+  const debounceTimer = useRef(null);
 
   useEffect(() => {
     const fetchUserMetadata = async () => {
@@ -49,6 +53,10 @@ const PassengerCheckInPage = () => {
         html5QrCode.stop().catch(() => {
           // Ignorar erros de parada durante a limpeza
         });
+      }
+      // Clear any pending debounce timer
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
       }
     };
   }, [isScanning]);
@@ -110,6 +118,19 @@ const PassengerCheckInPage = () => {
   };
 
   const handleScan = async (decodedText) => {
+    // If already processing a scan or debounce timer is active, ignore this scan
+    if (isProcessing.current) {
+      return;
+    }
+
+    // Clear any existing debounce timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Set processing flag
+    isProcessing.current = true;
+
     try {
       setScanResult(decodedText);
       // Analisa o conteúdo do QR code
@@ -171,6 +192,11 @@ const PassengerCheckInPage = () => {
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
       await stopScanning();
+    } finally {
+      // Set a debounce timer before allowing next scan
+      debounceTimer.current = setTimeout(() => {
+        isProcessing.current = false;
+      }, 2000); // 2 second debounce
     }
   };
 
@@ -178,6 +204,10 @@ const PassengerCheckInPage = () => {
     await stopScanning();
     setScanResult(null);
     setError(null);
+    isProcessing.current = false;
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
   };
 
   return (
