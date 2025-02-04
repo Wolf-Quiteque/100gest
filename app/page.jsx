@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { getUserSession } from '@/lib/supabase/useSession';
  
 export default function LoginPage() {
   const supabase = createClientComponentClient();
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const [email, setEmail] = useState('');
+  const [nosession, setNosession] = useState(false);
+
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -32,16 +35,33 @@ export default function LoginPage() {
 
       // Redirect to dashboard after successful login
       router.push('/dashboard');
+      return
     } catch (error) {
+      setLoading(false);
       toast({
         variant: 'destructive',
         title: 'Erro ao fazer login',
         description: error.message,
       });
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
+
+
+  const Getsession = async ()=>{
+
+    const sessionData = await getUserSession();
+    if (sessionData)  router.push('/dashboard');
+    else setNosession(true)
+  }
+
+  useEffect(() => {
+    Getsession()
+  }, []);
+
+if(!nosession){
+return null;
+}
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-50 to-white p-4">

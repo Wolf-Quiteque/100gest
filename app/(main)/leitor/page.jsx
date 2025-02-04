@@ -35,7 +35,7 @@ const LeitorPage = () => {
       <Card className="w-full max-w-md shadow-lg border-orange-100">
         <CardHeader>
           <CardTitle className="text-orange-600 text-center">
-            Leitor de QR Code
+            Leitor de QR Code - BILHETE
           </CardTitle>
         </CardHeader>
         <CardContent>

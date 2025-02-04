@@ -14,15 +14,7 @@ import { Toaster } from "@/components/ui/toaster"
 export default function RootLayout({ children }) {
   const router = useRouter()
 
-  const Getsession = async ()=>{
 
-    const sessionData = await getUserSession();
-   
-  }
-
-  useEffect(() => {
-    Getsession()
-  }, []);
 
 
 

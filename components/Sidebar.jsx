@@ -56,7 +56,7 @@ export default function Sidebar() {
   const toggleSidebar = () => setIsWide(!isWide);
 
   const menuItems = [
-    { title: 'Home', icon: <Home className="h-5 w-5" />, path: '/' },
+    { title: 'Home', icon: <Home className="h-5 w-5" />, path: '/dashboard' },
     { title: 'Bilhetes', icon: <Ticket className="h-5 w-5" />, path: '/bilhetes' },
     { title: 'Rotas', icon: <Route className="h-5 w-5" />, path: '/rotas' },
     { title: 'Carros', icon: <Bus className="h-5 w-5" />, path: '/carros' },
@@ -74,7 +74,11 @@ export default function Sidebar() {
     onMouseLeave={()=>{
       setIsWide(false)
     }}
+
+  
 >
+
+
       <div className="flex items-center justify-between p-4">
         <div className={`flex flex-col ${isWide ? 'block' : 'hidden'}`}>
           <h1 className="text-xl font-bold">100 D-Gest</h1>
