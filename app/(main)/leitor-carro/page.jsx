@@ -173,17 +173,12 @@ const LeitorPage = () => {
 
       // Set redirect timer
       redirectTimer.current = setTimeout(() => {
-        router.push('/dashboard');
-      }, 3000);
+        router.refresh();
+      }, 1300);
 
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
       await stopScanning();
-    } finally {
-      // Set a debounce timer before allowing next scan
-      debounceTimer.current = setTimeout(() => {
-        isProcessing.current = false;
-      }, 2000); // 2 second debounce
     }
   };
 
@@ -232,25 +227,7 @@ const LeitorPage = () => {
                 </Button>
               )}
 
-              {scanResult && (
-                <>
-                  <Alert className="bg-orange-100 border-orange-300">
-                    <AlertDescription className="text-orange-700">
-                      QR Code lido com sucesso!
-                    </AlertDescription>
-                  </Alert>
-                  <div>
-                    <p className="text-lg font-semibold">Conteúdo Lido:</p>
-                    <p className="text-orange-600">{scanResult}</p>
-                  </div>
-                  <Button 
-                    className="bg-orange-600 hover:bg-orange-700 text-white"
-                    onClick={resetScanner}
-                  >
-                    Ler Outro QR Code
-                  </Button>
-                </>
-              )}
+    
             </div>
             {error && (
               <Alert variant="destructive">
@@ -270,7 +247,7 @@ const LeitorPage = () => {
               Olá, {userMetadata?.userName}! O registro do ônibus{' '}
               <span className="font-semibold">{scannedBus?.reference}</span> foi salvo.
               <br />
-              Redirecionando para o painel em 3 segundos...
+              Redirecionando para o painel em 1 segundo...
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
