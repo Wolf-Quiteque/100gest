@@ -123,6 +123,19 @@ const LeitorPage = () => {
     }
   };
 
+  const resetScanner = async () => {
+    await stopScanning();
+    setScanResult(null);
+    setError(null);
+    isProcessing.current = false;
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    if (redirectTimer.current) {
+      clearTimeout(redirectTimer.current);
+    }
+  };
+
   const handleScan = async (decodedText) => {
     // If already processing a scan or debounce timer is active, ignore this scan
     if (isProcessing.current) {
@@ -167,12 +180,11 @@ const LeitorPage = () => {
 
       if (logError) throw logError;
 
-      await stopScanning();
+      await resetScanner();
       setScannedBus(bus);
       setIsModalOpen(true);
 
       // Set redirect timer
-      const go = await resetScanner()
        setTimeout(() => {
         router.refresh()
       }, 1300);
@@ -183,18 +195,7 @@ const LeitorPage = () => {
     }
   };
 
-  const resetScanner = async () => {
-    await stopScanning();
-    setScanResult(null);
-    setError(null);
-    isProcessing.current = false;
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    if (redirectTimer.current) {
-      clearTimeout(redirectTimer.current);
-    }
-  };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-orange-50 to-white p-4">
