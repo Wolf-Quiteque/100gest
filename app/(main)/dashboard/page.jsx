@@ -79,29 +79,28 @@ const DashboardPage = () => {
 
       // Fetch total bookings
       const { count: bookingsCount } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('bus_routes.company_id', companyId);
-
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('route.company_id', companyId);  // Use the foreign key relationship
+    
       setTotalBookings(bookingsCount || 0);
 
       // Fetch booking status data
       const { data: bookingsStatus, error: bookingStatusError } = await supabase
-        .from('bookings')
-        .select('booking_status, count')
-        .eq('bus_routes.company_id', companyId)
-        .select(`
-          booking_status,
-          count(*) as count
-        `)
-        .group_by('booking_status');
-
-      setBookingStatusData(
-        bookingsStatus?.map((status) => ({
-          name: status.booking_status === 'confirmed' ? 'Confirmados' : status.booking_status === 'pending' ? 'Pendentes' : 'Cancelados',
-          value: status.count,
-        })) || []
-      );
+      .from('bookings')
+      .select(`
+        booking_status,
+        count(*) as count
+      `)
+      .eq('route.company_id', companyId)
+        setBookingStatusData(
+          bookingsStatus?.map((status) => ({
+            name: status.booking_status === 'confirmed' ? 'Confirmados' 
+                : status.booking_status === 'pending' ? 'Pendentes' 
+                : 'Cancelados',
+            value: parseInt(status.count)  // Convert count from string to number
+          })) || []
+        );
 
         // Fetch route passenger data
         const { data: routePassengers, error: routePassengersError } = await supabase
@@ -111,14 +110,13 @@ const DashboardPage = () => {
             count(*) as count
           `)
           .eq('company_id', companyId)
-          .group_by('route');
 
-      setRoutePassengerData(
-        routePassengers?.map((route) => ({
-          name: route.route,
-          passageiros: route.count,
-        })) || []
-      );
+          setRoutePassengerData(
+            routePassengers?.map((route) => ({
+              name: route.route,
+              passageiros: parseInt(route.count)  // Convert count from string to number
+            })) || []
+          );
     } catch (error) {
       toast({
         variant: 'destructive',

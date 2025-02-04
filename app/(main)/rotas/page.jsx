@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Trash, Plus, Filter } from 'lucide-react';
+import { Pencil, Trash, Plus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,8 @@ export default function RotasPage() {
   const { toast } = useToast();
 
   const [routes, setRoutes] = useState([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingRoute, setEditingRoute] = useState(null);
   const [totalRoutes, setTotalRoutes] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [companyName, setCompanyName] = useState('Carregando...');
@@ -62,6 +64,57 @@ export default function RotasPage() {
   useEffect(() => {
     fetchCompanyAndRoutes();
   }, [currentPage, filterUrbano, filterOrigem, filterPartida]);
+
+
+  const handleEditClick = (route) => {
+    setEditingRoute({
+      ...route,
+      departure_time: route.departure_time.slice(0, 5), // Format time for input
+      arrival_time: route.arrival_time.slice(0, 5), // Format time for input
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateRoute = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('bus_routes')
+        .update({
+          origin: editingRoute.origin,
+          destination: editingRoute.destination,
+          departure_time: editingRoute.departure_time,
+          arrival_time: editingRoute.arrival_time,
+          duration: editingRoute.duration,
+          base_price: parseFloat(editingRoute.base_price),
+          total_seats: parseInt(editingRoute.total_seats),
+          urbano: editingRoute.urbano,
+        })
+        .eq('id', editingRoute.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Rota atualizada com sucesso.',
+        className: 'bg-orange-100 border-orange-300 text-orange-700',
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingRoute(null);
+      fetchCompanyAndRoutes();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao atualizar rota',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const fetchCompanyAndRoutes = async () => {
     setLoading(true);
@@ -288,20 +341,14 @@ export default function RotasPage() {
                   <TableCell>{route.total_seats}</TableCell>
                   <TableCell>{route.urbano ? 'Sim' : 'Não'}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-orange-600 hover:bg-orange-100"
-                      onClick={() => {
-                        // Implement edit functionality here
-                        toast({
-                          title: 'Editar Rota',
-                          description: 'Funcionalidade de edição em desenvolvimento.',
-                        });
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                  <Button
+          variant="ghost"
+          size="sm"
+          className="text-orange-600 hover:bg-orange-100"
+          onClick={() => handleEditClick(route)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -340,6 +387,107 @@ export default function RotasPage() {
           </div>
         </CardContent>
       </Card>
+
+
+      <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Editar Rota</AlertDialogTitle>
+          </AlertDialogHeader>
+          <form onSubmit={handleUpdateRoute} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Origem */}
+              <div className="space-y-2">
+                <Label>Origem</Label>
+                <Input
+                  value={editingRoute?.origin || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, origin: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Destino */}
+              <div className="space-y-2">
+                <Label>Destino</Label>
+                <Input
+                  value={editingRoute?.destination || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, destination: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Hora de Partida */}
+              <div className="space-y-2">
+                <Label>Hora de Partida</Label>
+                <Input
+                  type="time"
+                  value={editingRoute?.departure_time || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, departure_time: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Hora de Chegada */}
+              <div className="space-y-2">
+                <Label>Hora de Chegada</Label>
+                <Input
+                  type="time"
+                  value={editingRoute?.arrival_time || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, arrival_time: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Duração */}
+              <div className="space-y-2">
+                <Label>Duração</Label>
+                <Input
+                  value={editingRoute?.duration || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, duration: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Preço Base */}
+              <div className="space-y-2">
+                <Label>Preço Base</Label>
+                <Input
+                  type="number"
+                  value={editingRoute?.base_price || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, base_price: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Total de Assentos */}
+              <div className="space-y-2">
+                <Label>Total de Assentos</Label>
+                <Input
+                  type="number"
+                  value={editingRoute?.total_seats || ''}
+                  onChange={(e) => setEditingRoute({ ...editingRoute, total_seats: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Urbano */}
+              <div className="space-y-2">
+                <Label>Urbano</Label>
+                <Switch
+                  checked={editingRoute?.urbano || false}
+                  onCheckedChange={(checked) => setEditingRoute({ ...editingRoute, urbano: checked })}
+                />
+              </div>
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction type="submit">Salvar Alterações</AlertDialogAction>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {/* Add Route Dialog */}
       <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

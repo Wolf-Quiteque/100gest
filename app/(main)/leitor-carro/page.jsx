@@ -123,19 +123,6 @@ const LeitorPage = () => {
     }
   };
 
-  const resetScanner = async () => {
-    await stopScanning();
-    setScanResult(null);
-    setError(null);
-    isProcessing.current = false;
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    if (redirectTimer.current) {
-      clearTimeout(redirectTimer.current);
-    }
-  };
-
   const handleScan = async (decodedText) => {
     // If already processing a scan or debounce timer is active, ignore this scan
     if (isProcessing.current) {
@@ -180,22 +167,38 @@ const LeitorPage = () => {
 
       if (logError) throw logError;
 
-      await resetScanner();
+      await stopScanning();
       setScannedBus(bus);
       setIsModalOpen(true);
 
       // Set redirect timer
-       setTimeout(() => {
-        router.refresh()
+      redirectTimer.current = setTimeout(() => {
+        router.refresh();
       }, 1300);
 
     } catch (err) {
       setError('Erro ao processar QR code: ' + err.message);
       await stopScanning();
+    }finally {
+      // Set a debounce timer before allowing next scan
+      debounceTimer.current = setTimeout(() => {
+        isProcessing.current = false;
+      }, 2000); // 2 second debounce
     }
   };
 
-
+  const resetScanner = async () => {
+    await stopScanning();
+    setScanResult(null);
+    setError(null);
+    isProcessing.current = false;
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    if (redirectTimer.current) {
+      clearTimeout(redirectTimer.current);
+    }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-orange-50 to-white p-4">

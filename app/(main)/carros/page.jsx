@@ -211,6 +211,48 @@ export default function CarrosPage() {
     }
   };
 
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingBus, setEditingBus] = useState(null);
+
+  const handleEditClick = (bus) => {
+    setEditingBus(bus);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateBus = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('buses')
+        .update({
+          reference: editingBus.reference,
+          seats: parseInt(editingBus.seats),
+        })
+        .eq('id', editingBus.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Carro atualizado com sucesso.',
+        className: 'bg-orange-100 border-orange-300 text-orange-700',
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingBus(null);
+      fetchCompanyAndBuses();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao atualizar carro',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Card className="border-orange-100">
@@ -247,14 +289,14 @@ export default function CarrosPage() {
                     {new Date(bus.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell className="space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-orange-600 hover:bg-orange-100"
-                      onClick={() => setEditBus(bus)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                  <Button
+          variant="ghost"
+          size="sm"
+          className="text-orange-600 hover:bg-orange-100"
+          onClick={() => handleEditClick(bus)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -301,6 +343,39 @@ export default function CarrosPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Editar Carro</AlertDialogTitle>
+          </AlertDialogHeader>
+          <form onSubmit={handleUpdateBus} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Referência</Label>
+                <Input
+                  value={editingBus?.reference || ''}
+                  onChange={(e) => setEditingBus({ ...editingBus, reference: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Número de Assentos</Label>
+                <Input
+                  type="number"
+                  value={editingBus?.seats || ''}
+                  onChange={(e) => setEditingBus({ ...editingBus, seats: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction type="submit">Salvar Alterações</AlertDialogAction>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <AlertDialogContent>
